@@ -16,6 +16,7 @@ import de.bund.bsi.tresor.xaip.validator.api.boundary.ValidatorModule;
 import de.bund.bsi.tresor.xaip.validator.api.control.ModuleLogger;
 import de.bund.bsi.tresor.xaip.validator.api.entity.SyntaxValidationResult;
 import de.bund.bsi.tresor.xaip.validator.api.entity.XAIPValidatorException;
+import lombok.AllArgsConstructor;
 import oasis.names.tc.dss._1_0.core.schema.SignatureObject;
 import oasis.names.tc.dss_x._1_0.profiles.verificationreport.schema_.IndividualReportType;
 import oasis.names.tc.dss_x._1_0.profiles.verificationreport.schema_.VerificationReportType;
@@ -27,15 +28,31 @@ import oasis.names.tc.dss_x._1_0.profiles.verificationreport.schema_.Verificatio
  * 
  * @author wolffs
  */
-public enum Dispatcher
+@AllArgsConstructor
+public class Dispatcher
 {
-    INSTANCE;
+    private final SignatureFinder   sigFinder;
+    private final SignatureVerifier sigVerifier;
     
-    private SignatureFinder   sigFinder;
-    private SignatureVerifier sigVerifier;
+    private final SyntaxValidator   syntaxValidator;
+    private final ProtocolAssembler protocolAssembler;
     
-    private SyntaxValidator   syntaxValidator;
-    private ProtocolAssembler protocolAssembler;
+    /**
+     * Static factory that uses {@link ServiceLoader} to detect {@link ValidatorModule} implementations.
+     * 
+     * @param configProperties
+     *            the configuration data
+     * @return the ready-to-use dispatcher
+     */
+    public static Dispatcher create( Map<String, String> configProperties )
+    {
+        var sigFinder = loadModule( SignatureFinder.class, configProperties );
+        var sigVerifier = loadModule( SignatureVerifier.class, configProperties );
+        var syntaxValidator = loadModule( SyntaxValidator.class, configProperties );
+        var protocolAssembler = loadModule( ProtocolAssembler.class, configProperties );
+        
+        return new Dispatcher( sigFinder, sigVerifier, syntaxValidator, protocolAssembler );
+    }
     
     /**
      * Triggering and managing the XAIP validation by requesting the modules in a specific order and processing their responses. The
@@ -58,7 +75,6 @@ public enum Dispatcher
     public void dispatch( DispatcherArguments args )
     {
         ModuleLogger.initConfig( args.isVerbose(), args.getLog() );
-        loadModules( args.getModuleConfig() );
         
         SyntaxValidationResult syntaxResult = syntaxValidator.validateSyntax( args.getInput() );
         ModuleLogger.log( "finished syntax validation" );
@@ -87,21 +103,6 @@ public enum Dispatcher
     }
     
     /**
-     * Loading and configuring all validator modules.
-     * 
-     * @param configProperties
-     *            possible configuration properties
-     */
-    void loadModules( Map<String, String> configProperties )
-    {
-        sigFinder = loadModule( SignatureFinder.class, configProperties );
-        sigVerifier = loadModule( SignatureVerifier.class, configProperties );
-        
-        syntaxValidator = loadModule( SyntaxValidator.class, configProperties );
-        protocolAssembler = loadModule( ProtocolAssembler.class, configProperties );
-    }
-    
-    /**
      * Loads a module implementation of the provided moduleClass.
      * 
      * @param <T>
@@ -112,7 +113,7 @@ public enum Dispatcher
      *            the configuration data
      * @return the loaded module implementation
      */
-    <T extends ValidatorModule> T loadModule( Class<T> moduleClass, Map<String, String> configProperties )
+    private static <T extends ValidatorModule> T loadModule( Class<T> moduleClass, Map<String, String> configProperties )
     {
         String moduleName = moduleClass.getSimpleName();
         T module = ServiceLoader.load( moduleClass )

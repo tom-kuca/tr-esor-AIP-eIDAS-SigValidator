@@ -51,7 +51,8 @@ public final class CLI
             }
             else
             {
-                Dispatcher.INSTANCE.dispatch( args );
+                Dispatcher dispatcher = Dispatcher.create( args.getModuleConfig() );
+                dispatcher.dispatch( args );
                 ModuleLogger.log( "finished validation without errors" );
             }
         }

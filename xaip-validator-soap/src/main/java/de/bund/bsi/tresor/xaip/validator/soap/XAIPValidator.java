@@ -56,7 +56,8 @@ public class XAIPValidator implements S4
             "urn:oasis:names:tc:dss-x:1.0:profiles:verificationreport:schema#",
             "VerificationReport" );
     
-    private ServerConfig        config;
+    private final Dispatcher    dispatcher;
+    private final ServerConfig  config;
     
     @Override
     public ResponseBaseType verify( VerifyRequest parameters )
@@ -121,7 +122,7 @@ public class XAIPValidator implements S4
                 .moduleConfig( config.getModuleConfig() )
                 .build();
         
-        Dispatcher.INSTANCE.dispatch( args );
+        dispatcher.dispatch( args );
         
         return JAXB.unmarshal( new ByteArrayInputStream( resultOutput.toByteArray() ), VerificationReportType.class );
     }

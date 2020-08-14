@@ -17,6 +17,7 @@ import de.bund.bsi.tr_esor.api._1.S4;
 import de.bund.bsi.tr_esor.xaip._1.XAIPType;
 import de.bund.bsi.tresor.xaip.validator.api.control.ModuleLogger;
 import de.bund.bsi.tresor.xaip.validator.api.control.XAIPMarshaller;
+import de.bund.bsi.tresor.xaip.validator.dispatcher.Dispatcher;
 import de.bund.bsi.tresor.xaip.validator.soap.config.MessageBundle;
 import de.bund.bsi.tresor.xaip.validator.soap.config.ServerConfig;
 import oasis.names.tc.dss._1_0.core.schema.DocumentType;
@@ -86,7 +87,7 @@ public class Server
         URI uri = new URI( config.getProtocol(), null, config.getHost(), config.getPort(), config.getPath(), null, null );
         
         String address = uri.toString();
-        Endpoint.publish( address, new XAIPValidator( config ) );
+        Endpoint.publish( address, new XAIPValidator( Dispatcher.create( config.getModuleConfig() ), config ) );
         
         ModuleLogger.log( "published server on address: " + address );
     }
